@@ -12,12 +12,22 @@ from conhecendo_flower.task import train as train_fn
 app = ClientApp()
 
 
+'''
+msg: data sent from the server to the client
+context: contains client information and configurations/metadata
+The server recieves the return of train and evaluate functions as msg.reply_to
+'''
 @app.train()
 def train(msg: Message, context: Context):
     """Train the model on local data."""
 
     # Load the model and initialize it with the received weights
     model = Net()
+    '''
+    1. msg.content['arrays] extract the model weights sent by the server
+    2. to_torch_state_dict() convert the weights to pytorch dictionary format
+    3. load_state_dict() loads those weights into the local model
+    '''
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict())
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -25,9 +35,11 @@ def train(msg: Message, context: Context):
     # Load the data
     partition_id = context.node_config["partition-id"]
     num_partitions = context.node_config["num-partitions"]
+
+    # Calls the load_Data function inside the task.py file.
     trainloader, _ = load_data(partition_id, num_partitions)
 
-    # Call the training function
+    # Call the training function inside the task.py file
     train_loss = train_fn(
         model,
         trainloader,
@@ -62,7 +74,7 @@ def evaluate(msg: Message, context: Context):
     num_partitions = context.node_config["num-partitions"]
     _, valloader = load_data(partition_id, num_partitions)
 
-    # Call the evaluation function
+    # Call the evaluation function inside the task.py file
     eval_loss, eval_acc = test_fn(
         model,
         valloader,
